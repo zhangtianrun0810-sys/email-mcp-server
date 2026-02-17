@@ -1,197 +1,158 @@
 # Email MCP Server
 
-This MCP (Model Context Protocol) server lets your AI assistant send emails for you.
+An MCP (Model Context Protocol) server that lets your AI assistant send emails via SMTP.
 
-## What Can It Do?
+## Features
 
-Your AI assistant can:
+- **`send_simple_email`** — Send a quick email (text or HTML); accepts optional `smtp_config`
+- **`send_custom_email`** — Full control: CC/BCC, attachments; accepts optional `smtp_config`
+- **`test_smtp_connection`** — Verify your SMTP settings before sending; accepts optional `smtp_config`
 
-- Send both plain text and HTML emails
-- Attach files and documents
-- Send to multiple people with CC/BCC
-- Check if your email setup works
-
-## Available Tools
-
-### `send_email` - Simple Email Sending
-Send emails quickly using your environment configuration:
-- Just specify recipient, subject, and body
-- Automatically uses your configured SMTP settings
-- Perfect for quick messages
-
-### `send_custom_email` - Advanced Email Features
-Send emails with full control:
-- Send to multiple people with CC/BCC
-- Add file attachments
-- Use HTML formatting
-- Override SMTP settings per email
-
-### `test_smtp_connection_tool` - Check Setup
-Test your email settings before sending important emails.
-
-## Getting Started
-
-### 1. Install Required Software
+## Quick Start
 
 ```bash
-# Install uv (Python package manager)
+# Install uv if you don't have it
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Restart your terminal or run:
-source ~/.bashrc
-```
-
-### 2. Install Project Dependencies
-
-```bash
 cd email-mcp-server
-uv sync
+uv sync --extra dev
 ```
 
-### 3. Test the Installation
+Configure SMTP (see next section), then run:
 
 ```bash
-# Test your email setup
-uv run python test_email.py
+# stdio transport (for MCP clients)
+uv run python -m email_mcp_server.server
 
-# Run the server directly (for testing)
-uv run main.py
+# Streamable HTTP transport (port 8000)
+uv run python -m email_mcp_server.server --http
 ```
 
-### 4. Configure Claude Desktop or Cursor
+Run tests:
 
-Add this to your Claude Desktop configuration or Cursor file:
+```bash
+uv run pytest
+```
+
+## SMTP Configuration
+
+You can configure SMTP credentials in two ways — use one or both.
+
+### Option A: Environment variables
+
+Copy the example and fill in your credentials:
+
+```bash
+cp env.example .env
+```
+
+```env
+# Required
+SMTP_HOST=smtp.gmail.com
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+SMTP_FROM=your-email@gmail.com
+
+# Optional (defaults shown)
+# SMTP_PORT=587
+# SMTP_SECURE=false
+```
+
+Alternatively, pass them via the client's `env` block (see Client Configuration below).
+
+### Option B: Per-call payload
+
+Pass `smtp_config` directly in any tool call — environment variables are ignored for that call:
+
 ```json
 {
-  "mcpServers": {
-      "mcp-server": {
-          "command": "uv",
-          "args": [
-              "--directory",
-              "path/to/the/app/email-mcp-server",
-              "run",
-              "main.py"
-          ],
-          "env": {
-              "SMTP_HOST": "",
-              "SMTP_PORT": "",
-              "SMTP_SECURE": "",
-              "SMTP_USER": "",
-              "SMTP_FROM": "",
-              "SMTP_PASS": ""
-          }
-      }
+  "smtp_config": {
+    "host": "smtp.gmail.com",
+    "port": 587,
+    "secure": false,
+    "username": "your-email@gmail.com",
+    "password": "your-app-password",
+    "from_email": "your-email@gmail.com"
   }
 }
 ```
 
-**Important**: Change the directory path to match your actual installation location.
+| Field | Type | Description |
+|-------|------|-------------|
+| `host` | string | SMTP server hostname |
+| `port` | integer | SMTP server port (usually `587`) |
+| `secure` | boolean | Use SSL/TLS (`false` for STARTTLS) |
+| `username` | string | Auth username |
+| `password` | string | Auth password |
+| `from_email` | string | Sender email address |
 
-### Simple Examples
+## Client Configuration
 
-**Send a basic email:**
-```
-"Send an email to john@company.com saying the meeting is tomorrow at 2 PM"
-```
-
-**Send with HTML formatting:**
-```
-"Send an HTML email to team@company.com with subject 'Weekly Update' and create a nice formatted message about this week's progress"
-```
-
-**Test your setup:**
-```
-"Test the email connection to make sure it's working"
-```
-
-### Advanced Examples
-
-**Send to multiple people with attachments:**
-```
-"Send a custom email to the team about the project update. Send to team@company.com, CC manager@company.com, and attach the project report"
-```
-
-## Email Provider Setup
-
-### For Gmail
-```json
-"env": {
-    "SMTP_HOST": "smtp.gmail.com",
-    "SMTP_PORT": "587",
-    "SMTP_SECURE": "false",
-    "SMTP_USER": "your-email@gmail.com",
-    "SMTP_FROM": "your-email@gmail.com",
-    "SMTP_PASS": "your-app-password"
-}
-```
-
-**Gmail Setup Steps:**
-1. Enable 2-Factor Authentication
-2. Go to Google Account → Security → App passwords
-3. Generate an app password for "Mail"
-4. Use the 16-character app password
-
-### For Outlook
-```json
-"env": {
-    "SMTP_HOST": "smtp-mail.outlook.com",
-    "SMTP_PORT": "587",
-    "SMTP_SECURE": "false",
-    "SMTP_USER": "your-email@outlook.com",
-    "SMTP_FROM": "your-email@outlook.com",
-    "SMTP_PASS": "your-password"
-}
-```
-
-### For Other Providers
-Replace the SMTP settings with your provider's details. Most providers use:
-- Port 587 with SMTP_SECURE=false (STARTTLS)
-- Port 465 with SMTP_SECURE=true (SSL)
-
-## Configuration Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `SMTP_HOST` | Your email server | `smtp.gmail.com` |
-| `SMTP_PORT` | Server port | `587` |
-| `SMTP_SECURE` | Use SSL (true/false) | `false` |
-| `SMTP_USER` | Your username | `user@gmail.com` |
-| `SMTP_FROM` | Sender address | `noreply@company.com` |
-| `SMTP_PASS` | Your password | `your-password` |
-
-## Troubleshooting
-
-### "Missing Configuration"
-- Make sure all environment variables are set in the Claude Desktop config
-- Check that the directory path is correct and absolute
-- Restart Claude Desktop after making changes
-
-### "Authentication Failed"
-- For Gmail/Yahoo: Use app passwords, not regular passwords
-- Enable 2-Factor Authentication first
-- Double-check username and password
-
-### "Connection Issues"
-- Verify SMTP host and port are correct
-- Check your internet connection
-- Some networks block SMTP ports
-
-### "Server Not Found"
-- Make sure `uv` is installed and in your PATH
-- Check that the directory path exists
-- Verify the project dependencies are installed with `uv sync`
-
-## Testing
+### Claude Code
 
 ```bash
-# Test configuration and connection
-uv run python test_email.py
+# stdio
+claude mcp add email-server -- uv --directory /absolute/path/to/email-mcp-server run python -m email_mcp_server.server
 
-# Send a real test email to yourself
-uv run python test_email.py --send-real
+# streamable HTTP (start the server first with --http)
+claude mcp add --transport http email-server http://localhost:8000/mcp
 ```
 
+### JSON-based clients (Claude Desktop, Cursor, VS Code, Windsurf, Zed)
+
+Use the generic example below and adjust the top-level key and config file path for your client:
+
+```json
+{
+  "<top-level-key>": {
+    "email-server": {
+      "command": "uv",
+      "args": ["--directory", "/absolute/path/to/email-mcp-server", "run", "python", "-m", "email_mcp_server.server"],
+      "env": {
+        "SMTP_HOST": "smtp.gmail.com",
+        "SMTP_PORT": "587",
+        "SMTP_SECURE": "false",
+        "SMTP_USER": "your-email@gmail.com",
+        "SMTP_FROM": "your-email@gmail.com",
+        "SMTP_PASS": "your-app-password"
+      }
+    }
+  }
+}
+```
+
+| Client | Config file path | Top-level key | Notes |
+|--------|-----------------|---------------|-------|
+| Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` | `mcpServers` | Windows: `%APPDATA%\Claude\...` |
+| Cursor | `~/.cursor/mcp.json` | `mcpServers` | Or `.cursor/mcp.json` (project) |
+| VS Code | `.vscode/mcp.json` | `servers` | Add `"type": "stdio"` inside the server entry |
+| Windsurf | `~/.codeium/windsurf/mcp_config.json` | `mcpServers` | |
+| Zed | `~/.config/zed/settings.json` | `context_servers` | |
+
+### Streamable HTTP (any client)
+
+Start the server with `uv run python -m email_mcp_server.server --http`, then:
+
+| Client | Config |
+|--------|--------|
+| Claude Code | `claude mcp add --transport http email-server http://localhost:8000/mcp` |
+| Claude Desktop | `{ "type": "http", "url": "http://localhost:8000/mcp" }` |
+| Cursor | `{ "url": "http://localhost:8000/mcp" }` |
+| VS Code | `{ "type": "http", "url": "http://localhost:8000/mcp" }` |
+| Windsurf | `{ "serverUrl": "http://localhost:8000/mcp" }` |
+| Zed | `{ "url": "http://localhost:8000/mcp" }` |
+
+## Provider Settings
+
+| Provider | Host | Notes |
+|----------|------|-------|
+| Gmail | `smtp.gmail.com` | Requires [app password](https://myaccount.google.com/apppasswords) with 2FA enabled |
+| Outlook | `smtp-mail.outlook.com` | Regular password or app password |
+| Yahoo | `smtp.mail.yahoo.com` | Requires app password with 2FA enabled |
+| iCloud | `smtp.mail.me.com` | Requires app password with 2FA enabled |
+
+All providers use port `587` with `SMTP_SECURE=false` (STARTTLS).
 
 ## License
 
-MIT License - Feel free to use and modify as needed.
+MIT License
