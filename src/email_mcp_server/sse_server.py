@@ -1,9 +1,11 @@
 import os
 import uvicorn
-from email_mcp_server.server import mcp
+import email_mcp_server.server as server_module
+
+# 自动寻找模块里的 FastMCP 实例（不管叫 mcp、app 还是 server）
+mcp_obj = getattr(server_module, "mcp", None) or getattr(server_module, "app", None) or getattr(server_module, "server", None)
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))
-    # 使用 FastMCP 内置的 sse app 启动 uvicorn
-    app = mcp.sse_app()
+    port = int(os.getenv("PORT", 10000))
+    app = mcp_obj.sse_app()
     uvicorn.run(app, host="0.0.0.0", port=port)
