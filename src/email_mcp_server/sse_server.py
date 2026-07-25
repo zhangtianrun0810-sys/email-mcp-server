@@ -6,8 +6,10 @@ from starlette.middleware.cors import CORSMiddleware
 # 创建 FastMCP 实例
 mcp = FastMCP("Email MCP Server")
 
-# 获取 FastAPI / Starlette 应用并添加 CORS 跨域支持
+# 获取 ASGI app
 app = mcp.sse_app()
+
+# 添加 CORS 跨域支持
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
