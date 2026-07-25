@@ -2,32 +2,28 @@ import os
 import uvicorn
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
-from starlette.responses import JSONResponse
-from starlette.routing import Mount, Route
+from starlette.routing import Mount
 
-# 1. 直接导入原作者暴露的创建函数
+# 1. 导入原作者的创建函数，生成带有真实工具的实例
 from email_mcp_server.server import create_server
-
-# 2. 调用函数，真正生成带有所有邮件工具的 FastMCP 实例！
 mcp_obj = create_server()
+fastmcp_app = mcp_obj.sse_app()
 
-# 获取 FastMCP 内置的 SSE 应用
-sse_app = mcp_obj.sse_app()
+# 2. 核心修复：智能路由重写器（拦截并纠正 sullyOS 的发件地址）
+async def rewrite_middleware(scope, receive, send):
+    if scope["type"] == "http":
+        # 把所有的 POST 请求，强制导向 FastMCP 的真实数据处理接口
+        if scope["method"] == "POST":
+            scope["path"] = "/messages/"
+        # 如果直接访问根目录，强制导向 /sse 建立订阅
+        elif scope["method"] == "GET" and scope["path"] == "/":
+            scope["path"] = "/sse"
+            
+    # 把修正好路径的真实请求，原封不动交给真正的 FastMCP 处理
+    await fastmcp_app(scope, receive, send)
 
-# 3. 兼容路由：防止 sullyOS 连通性测试时报 404 或 405
-async def handle_root(request):
-    if request.method == "POST":
-        return JSONResponse({"status": "ok", "message": "FastMCP Email Server Ready"})
-    return await sse_app(request.scope, request.receive, request.send)
-
-routes = [
-    Route("/", endpoint=handle_root, methods=["GET", "POST", "OPTIONS"]),
-    Route("/sse", endpoint=handle_root, methods=["GET", "POST", "OPTIONS"]),
-    Mount("/", app=sse_app),
-]
-
-# 4. 组装应用并开启跨域 (CORS)
-app = Starlette(routes=routes)
+# 3. 组装应用并开启无死角跨域许可 (CORS)
+app = Starlette(routes=[Mount("/", app=rewrite_middleware)])
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
